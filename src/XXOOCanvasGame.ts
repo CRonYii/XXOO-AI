@@ -1,5 +1,12 @@
 import * as XXOO from './XXOO';
 
+
+interface Minimax {
+    value: number,
+    action: XXOO.Action,
+    array: Minimax[];
+}
+
 export class XXOOCanvasGame {
 
     public static BLOCK_SIZE: number = 100;
@@ -20,7 +27,7 @@ export class XXOOCanvasGame {
         this.canvas.addEventListener('click', ({ layerX, layerY }) => {
             const x = Math.floor(layerX / XXOOCanvasGame.BLOCK_SIZE);
             const y = Math.floor(layerY / XXOOCanvasGame.BLOCK_SIZE);
-            if (this.next({ x, y }) && !this.state.endTest()) {
+            if (this.next({ x, y }) && !this.state.isEnd) {
                 this.AI();
             }
         });
@@ -41,57 +48,63 @@ export class XXOOCanvasGame {
 
     AI() {
         this.count = 0;
-        let action: XXOO.Action;
-        if (this.state.player() === XXOO.Sign.O) {
-            action = this.minValue(this.state).action;
+        let result: Minimax;
+        if (this.state.player === XXOO.Sign.O) {
+            result = this.minValue(this.state);
         } else {
-            action = this.maxValue(this.state).action;
+            result = this.maxValue(this.state);
         }
-        this.next(action);
-        console.log(this.count);
+        this.next(result.action);
+        console.log(this.count, result);
     }
 
-    maxValue(state: XXOO.Game): { value: number, action: XXOO.Action } {
+    maxValue(state: XXOO.Game): Minimax {
         this.count++;
-        if (state.endTest()) {
-            return { value: state.utility(), action: null };
+        if (state.isEnd) {
+            if (this.count % 100000 === 0) console.log(this.count);
+            return { value: state.utility, action: null, array: null };
         }
         let value = -Infinity;
         let action: XXOO.Action;
-        state.actions().forEach((a: XXOO.Action) => {
-            const v = this.minValue(state.next(a)).value;
+        const array = state.actions.map((a: XXOO.Action) => {
+            const result = this.minValue(state.next(a));
+            const v = result.value;
             if (v > value) {
                 value = v;
                 action = a;
             }
+            return result;
         });
-        return { value, action };
+        return { value, action, array };
     }
 
-    minValue(state: XXOO.Game): { value: number, action: XXOO.Action } {
+    minValue(state: XXOO.Game): Minimax {
         this.count++;
-        if (state.endTest()) {
-            return { value: state.utility(), action: null };
+        if (state.isEnd) {
+            if (this.count % 100000 === 0) console.log(this.count);
+            return { value: state.utility, action: null, array: null };
         }
         let value = +Infinity;
         let action: XXOO.Action;
-        state.actions().forEach((a: XXOO.Action) => {
-            const v = this.maxValue(state.next(a)).value;
+        const array = state.actions.map((a: XXOO.Action) => {
+            const result = this.maxValue(state.next(a));
+            const v = result.value;
             if (v < value) {
                 value = v;
                 action = a;
             }
+            return result;
         });
-        return { value, action };
+        return { value, action, array };
     }
 
     next({ x, y }: XXOO.Action) {
-        if (this.state.endTest() || this.state.isInvalidClick({ x, y })) {
+        if (this.state.isEnd || this.state.isInvalidClick({ x, y })) {
             return false;
         }
         this.state = this.state.next({ x, y });
-        if (this.state.endTest()) {
-            switch (this.state.utility()) {
+        if (this.state.isEnd) {
+            switch (this.state.utility) {
                 case 1:
                     console.log('X won!!');
                     break;

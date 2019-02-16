@@ -15,17 +15,25 @@ export class Game {
     public static readonly SIDE: number = 3;
 
     public readonly matrix: Sign[][];
+    public readonly player: Sign;
+    public readonly actions: Action[];
+    public readonly utility: number;
+    public readonly isEnd: boolean;
 
     constructor(matrix: Sign[][]) {
         this.matrix = matrix;
+        this.player = Game.player(this);
+        this.actions = Game.actions(this);
+        this.isEnd = Game.endTest(this);
+        this.utility = Game.utility(this);
     }
 
     /**
      * compute the current player based on the number of signs on the board
      */
-    player(): Sign {
+    static player(game: Game): Sign {
         let result = 0;
-        this.matrix.forEach((row) => {
+        game.matrix.forEach((row) => {
             row.forEach(block => {
                 switch (block) {
                     case 'X':
@@ -42,12 +50,12 @@ export class Game {
         return Game.Players[result];
     }
 
-    actions(): Action[] {
-        if (this.endTest()) {
+    static actions(game: Game): Action[] {
+        if (game.isEnd) {
             return [];
         }
         const actions: Action[] = [];
-        this.matrix.forEach((row, y) => {
+        game.matrix.forEach((row, y) => {
             row.forEach((block, x) => {
                 if (block === Sign.EMPTY) {
                     actions.push({ x, y });
@@ -58,7 +66,7 @@ export class Game {
     }
 
     next({ x, y }: Action) {
-        if (this.endTest()) {
+        if (this.isEnd) {
             console.error('already reached goal');
             return this;
         }
@@ -69,16 +77,16 @@ export class Game {
 
         const nextMatrix = this.matrix.map(row => row.slice());
         // action
-        nextMatrix[y][x] = this.player();
+        nextMatrix[y][x] = this.player;
         return new Game(nextMatrix);
     }
 
-    endTest(): boolean {
-        if (this.tie()) {
+    static endTest(game: Game): boolean {
+        if (game.tie()) {
             return true;
         };
 
-        return this.winTest();
+        return game.winTest();
     }
 
     /**
@@ -86,17 +94,17 @@ export class Game {
      * if O won, return -1,
      * if tie, return 0
      */
-    utility(): number {
-        if (this.endTest()) {
+    static utility(game: Game): number {
+        if (game.isEnd) {
 
-            if (this.winTest()) {
-                return this.player() === Sign.X ? -1 : 1;
+            if (game.winTest()) {
+                return game.player === Sign.X ? -1 : 1;
             } else {
                 return 0;
             }
 
         } else {
-            console.error('Not goal yet');
+            return null;
         }
     }
 
