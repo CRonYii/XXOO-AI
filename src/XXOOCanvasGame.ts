@@ -1,5 +1,5 @@
 import * as XXOO from './XXOO';
-import { XXOOSearchingAI } from './XXOOSearchingAI';
+import XXOOAlphaBetaSearchAI from './XXOOAlphaBetaSearchAI';
 
 export interface XXOOAI {
     play: (state: XXOO.Game) => XXOO.Action
@@ -14,7 +14,7 @@ export class XXOOCanvasGame {
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
     private state: XXOO.Game;
-    private AI: XXOOAI = new XXOOSearchingAI();
+    private AI: XXOOAI = new XXOOAlphaBetaSearchAI();
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;

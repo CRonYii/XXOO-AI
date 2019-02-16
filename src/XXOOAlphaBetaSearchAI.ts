@@ -3,11 +3,10 @@ import * as XXOO from './XXOO';
 
 interface Minimax {
     value: number,
-    action: XXOO.Action,
-    array: Minimax[];
+    action?: XXOO.Action,
 }
 
-export class XXOOSearchingAI implements XXOOAI {
+export default class XXOOAlphaBetaSearchAI implements XXOOAI {
 
     private count: number;
 
@@ -15,51 +14,57 @@ export class XXOOSearchingAI implements XXOOAI {
         this.count = 0;
         let result: Minimax;
         if (state.player === XXOO.Sign.O) {
-            result = this.minValue(state);
+            result = this.minValue(state, -Infinity, +Infinity);
         } else {
-            result = this.maxValue(state);
+            result = this.maxValue(state, -Infinity, +Infinity);
         }
         console.log(this.count, result);
         return result.action;
     }
 
-    maxValue(state: XXOO.Game): Minimax {
+    maxValue(state: XXOO.Game, alpha: number, beta: number): Minimax {
         this.count++;
         if (state.isEnd) {
             if (this.count % 100000 === 0) console.log(this.count);
-            return { value: state.utility, action: null, array: null };
+            return { value: state.utility };
         }
         let value = -Infinity;
         let action: XXOO.Action;
-        const array = state.actions.map((a: XXOO.Action) => {
-            const result = this.minValue(state.next(a));
+        for (let a of state.actions) {
+            const result = this.minValue(state.next(a), alpha, beta);
             const v = result.value;
             if (v > value) {
                 value = v;
                 action = a;
             }
-            return result;
-        });
-        return { value, action, array };
+            if (v > beta) {
+                return { value }
+            }
+            alpha = Math.max(alpha, v);
+        }
+        return { value, action };
     }
 
-    minValue(state: XXOO.Game): Minimax {
+    minValue(state: XXOO.Game, alpha: number, beta: number): Minimax {
         this.count++;
         if (state.isEnd) {
             if (this.count % 100000 === 0) console.log(this.count);
-            return { value: state.utility, action: null, array: null };
+            return { value: state.utility };
         }
         let value = +Infinity;
         let action: XXOO.Action;
-        const array = state.actions.map((a: XXOO.Action) => {
-            const result = this.maxValue(state.next(a));
+        for (let a of state.actions) {
+            const result = this.maxValue(state.next(a), alpha, beta);
             const v = result.value;
             if (v < value) {
                 value = v;
                 action = a;
             }
-            return result;
-        });
-        return { value, action, array };
+            if (v <= alpha) {
+                return { value }
+            }
+            beta = Math.min(beta, v);
+        }
+        return { value, action };
     }
 }
