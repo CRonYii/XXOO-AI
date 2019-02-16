@@ -1,10 +1,8 @@
 import * as XXOO from './XXOO';
+import { XXOOSearchingAI } from './XXOOSearchingAI';
 
-
-interface Minimax {
-    value: number,
-    action: XXOO.Action,
-    array: Minimax[];
+export interface XXOOAI {
+    play: (state: XXOO.Game) => XXOO.Action
 }
 
 export class XXOOCanvasGame {
@@ -16,8 +14,7 @@ export class XXOOCanvasGame {
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
     private state: XXOO.Game;
-
-    private count: number;
+    private AI: XXOOAI = new XXOOSearchingAI();
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
@@ -28,7 +25,7 @@ export class XXOOCanvasGame {
             const x = Math.floor(layerX / XXOOCanvasGame.BLOCK_SIZE);
             const y = Math.floor(layerY / XXOOCanvasGame.BLOCK_SIZE);
             if (this.next({ x, y }) && !this.state.isEnd) {
-                this.AI();
+                this.AIPlay();
             }
         });
     }
@@ -46,56 +43,9 @@ export class XXOOCanvasGame {
         this.drawBackground();
     }
 
-    AI() {
-        this.count = 0;
-        let result: Minimax;
-        if (this.state.player === XXOO.Sign.O) {
-            result = this.minValue(this.state);
-        } else {
-            result = this.maxValue(this.state);
-        }
-        this.next(result.action);
-        console.log(this.count, result);
-    }
-
-    maxValue(state: XXOO.Game): Minimax {
-        this.count++;
-        if (state.isEnd) {
-            if (this.count % 100000 === 0) console.log(this.count);
-            return { value: state.utility, action: null, array: null };
-        }
-        let value = -Infinity;
-        let action: XXOO.Action;
-        const array = state.actions.map((a: XXOO.Action) => {
-            const result = this.minValue(state.next(a));
-            const v = result.value;
-            if (v > value) {
-                value = v;
-                action = a;
-            }
-            return result;
-        });
-        return { value, action, array };
-    }
-
-    minValue(state: XXOO.Game): Minimax {
-        this.count++;
-        if (state.isEnd) {
-            if (this.count % 100000 === 0) console.log(this.count);
-            return { value: state.utility, action: null, array: null };
-        }
-        let value = +Infinity;
-        let action: XXOO.Action;
-        const array = state.actions.map((a: XXOO.Action) => {
-            const result = this.maxValue(state.next(a));
-            const v = result.value;
-            if (v < value) {
-                value = v;
-                action = a;
-            }
-            return result;
-        });
-        return { value, action, array };
+    AIPlay() {
+        if (this.AI)
+            this.next(this.AI.play(this.state));
     }
 
     next({ x, y }: XXOO.Action) {
