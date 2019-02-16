@@ -6,63 +6,77 @@ class XXOOCanvasGame {
         this.init();
 
         this.canvas.addEventListener('click', ({ layerX, layerY }) => {
-            const x = Math.floor(layerX / 100);
-            const y = Math.floor(layerY / 100);
-            this.next({ x, y });
-            if (!this.state.goalTest()) {
+            const x = Math.floor(layerX / XXOOCanvasGame.BLOCK_SIZE);
+            const y = Math.floor(layerY / XXOOCanvasGame.BLOCK_SIZE);
+            if (this.next({ x, y }) && !this.state.goalTest()) {
                 this.AI();
             }
         });
     }
 
     init() {
-        this.state = new XXOO([
-            [null, null, null],
-            [null, null, null],
-            [null, null, null]
-        ]);
+        const matrix = [];
+        for (let i = 0; i < XXOOCanvasGame.ROWS; i++) {
+            const sub = [];
+            for (let j = 0; j < XXOOCanvasGame.ROWS; j++) {
+                sub.push(null);
+            }
+            matrix.push(sub);
+        }
+        this.state = new XXOO(matrix);
         this.drawBackground();
     }
 
     AI() {
-        const actions = this.state.actions();
-        const choices = actions.map((action) => {
-            return this.minValue(this.state.next(action));
-        });
-        const bestMatch = choices.reduce((prev, cur, curI, array) => {
-            if (cur > array[prev]) {
-                return curI;
-            } else {
-                return prev;
-            }
-        }, 0);
-        console.log(choices);
-        this.next(actions[bestMatch]);
+        this.count = 0;
+        let action;
+        if (this.state.player() === 'O') {
+            action = this.minValue(this.state).action;
+        } else {
+            action = this.maxValue(this.state).action;
+        }
+        this.next(action);
+        console.log(this.count);
     }
 
     maxValue(state) {
+        this.count++;
         if (state.goalTest()) {
-            return state.utility();
+            return { value: state.utility(), action: null };
         }
         let value = -Infinity;
-        state.actions().forEach((action) => {
-            value = Math.max(value, this.minValue(state.next(action)));
+        let action;
+        state.actions().forEach((a) => {
+            const v = this.minValue(state.next(a)).value;
+            if (v > value) {
+                value = v;
+                action = a;
+            }
         });
-        return value;
+        return { value, action };
     }
 
     minValue(state) {
+        this.count++;
         if (state.goalTest()) {
-            return state.utility();
+            return { value: state.utility(), action: null };
         }
         let value = +Infinity;
-        state.actions().forEach((action) => {
-            value = Math.min(value, this.maxValue(state.next(action)));
+        let action;
+        state.actions().forEach((a) => {
+            const v = this.maxValue(state.next(a)).value;
+            if (v < value) {
+                value = v;
+                action = a;
+            }
         });
-        return value;
+        return { value, action };
     }
 
     next({ x, y }) {
+        if (this.state.goalTest() || x < 0 || x > XXOOCanvasGame.COLUMNS - 1 || y < 0 || y > XXOOCanvasGame.ROWS - 1 || this.state.matrix[y][x]) {
+            return false;
+        }
         this.state = this.state.next({ x, y });
         if (this.state.goalTest()) {
             switch (this.state.utility()) {
@@ -79,23 +93,25 @@ class XXOOCanvasGame {
         }
         this.drawBackground();
         this.drawOptions();
+
+        return true;
     }
 
     drawBackground() {
         this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.fillRect(0, 0, 300, 300);
+        this.ctx.fillRect(0, 0, XXOOCanvasGame.WIDTH, XXOOCanvasGame.HEIGHT);
         this.ctx.fillStyle = '#000000';
-        this.ctx.strokeRect(0, 0, 300, 300);
+        this.ctx.strokeRect(0, 0, XXOOCanvasGame.WIDTH, XXOOCanvasGame.HEIGHT);
 
-        for (let i = 1; i <= 2; i++) {
+        for (let i = 1; i <= XXOOCanvasGame.ROWS - 1; i++) {
             this.ctx.beginPath();
-            this.ctx.moveTo(100 * i, 0);
-            this.ctx.lineTo(100 * i, 300);
+            this.ctx.moveTo(XXOOCanvasGame.BLOCK_SIZE * i, 0);
+            this.ctx.lineTo(XXOOCanvasGame.BLOCK_SIZE * i, XXOOCanvasGame.HEIGHT);
             this.ctx.stroke();
 
             this.ctx.beginPath();
-            this.ctx.moveTo(0, 100 * i);
-            this.ctx.lineTo(300, 100 * i);
+            this.ctx.moveTo(0, XXOOCanvasGame.BLOCK_SIZE * i);
+            this.ctx.lineTo(XXOOCanvasGame.WIDTH, XXOOCanvasGame.BLOCK_SIZE * i);
             this.ctx.stroke();
         }
     }
@@ -106,13 +122,19 @@ class XXOOCanvasGame {
                 if (block) {
                     this.ctx.fillStyle = '#000000';
                     this.ctx.font = '50px arial';
-                    this.ctx.fillText(block, 100 * x + 30, 100 * y + 60);
+                    this.ctx.fillText(block, XXOOCanvasGame.BLOCK_SIZE * x + 30, XXOOCanvasGame.BLOCK_SIZE * y + 60);
                 }
             })
         });
     }
 
 }
+
+XXOOCanvasGame.BLOCK_SIZE = 100;
+XXOOCanvasGame.COLUMNS = 4;
+XXOOCanvasGame.ROWS = 4;
+XXOOCanvasGame.WIDTH = XXOOCanvasGame.COLUMNS * XXOOCanvasGame.BLOCK_SIZE;
+XXOOCanvasGame.HEIGHT = XXOOCanvasGame.ROWS * XXOOCanvasGame.BLOCK_SIZE;
 
 class XXOO {
 
@@ -159,7 +181,7 @@ class XXOO {
             console.error('already reached goal');
             return new XXOO(this.matrix);
         }
-        if (x < 0 || x > 2 || y < 0 || y > 2 || this.matrix[y][x]) {
+        if (x < 0 || x > XXOOCanvasGame.ROWS - 1 || y < 0 || y > XXOOCanvasGame.ROWS - 1 || this.matrix[y][x]) {
             console.error('invalid x y: ', x, y);
             return new XXOO(this.matrix);
         }
@@ -174,8 +196,16 @@ class XXOO {
         if (this.tie()) {
             return true;
         };
-        for (let i = 0; i < 3; i++) {
-            if (this.hypoTest() || this.rowTest(i) || this.columnTest(i)) {
+
+        return this.winTest();
+    }
+
+    winTest() {
+        if (this.hypoTest()) {
+            return true;
+        }
+        for (let i = 0; i < XXOOCanvasGame.COLUMNS; i++) {
+            if (this.rowTest(i) || this.columnTest(i)) {
                 return true;
             }
         }
@@ -186,10 +216,10 @@ class XXOO {
     utility() {
         if (this.goalTest()) {
 
-            if (this.tie()) {
-                return 0;
-            } else {
+            if (this.winTest()) {
                 return this.player() === 'X' ? -1 : 1;
+            } else {
+                return 0;
             }
 
         } else {
@@ -210,7 +240,7 @@ class XXOO {
             return false;
         }
 
-        for (let x = 1; x < 3; x++) {
+        for (let x = 1; x < XXOOCanvasGame.COLUMNS; x++) {
             if (this.matrix[y][x] !== this.matrix[y][x - 1]) {
                 return false;
             }
@@ -224,7 +254,7 @@ class XXOO {
             return false;
         }
 
-        for (let y = 1; y < 3; y++) {
+        for (let y = 1; y < XXOOCanvasGame.COLUMNS; y++) {
             if (this.matrix[y][x] !== this.matrix[y - 1][x]) {
                 return false;
             }
@@ -235,14 +265,14 @@ class XXOO {
 
     hypoTest() {
         let topLeftBottomRight = this.matrix[0][0];
-        let bottomLeftTopRight = this.matrix[2][0];
-        for (let i = 1; i < 3; i++) {
+        let bottomLeftTopRight = this.matrix[XXOOCanvasGame.COLUMNS - 1][0];
+        for (let i = 1; i < XXOOCanvasGame.COLUMNS; i++) {
             if (this.matrix[i][i] !== this.matrix[i - 1][i - 1]) {
                 topLeftBottomRight = false;
                 break;
             }
         }
-        for (let x = 1, y = 1; x >= 0, y < 3; x-- , y++) {
+        for (let x = 1, y = 1; x >= 0, y < XXOOCanvasGame.COLUMNS; x-- , y++) {
             if (this.matrix[y][x] !== this.matrix[y - 1][x + 1]) {
                 bottomLeftTopRight = false;
                 break;
